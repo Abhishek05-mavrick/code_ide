@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Editor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #1e1e1e;
+            color: #fff;
+            height: 100vh;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 250px;
+            background-color: #252526;
+            border-right: 1px solid #333;
+            overflow-y: auto;
+        }
+
+        .problems-section {
+            padding: 20px;
+        }
+
+        .problems-section h2 {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #fff;
+        }
+
+        .problem-item {
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #2d2d2d;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .problem-item:hover {
+            background-color: #333;
+        }
+
+        .problem-item h3 {
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .problem-item p {
+            font-size: 0.8em;
+            color: #989898;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .editor-header {
+            padding: 10px 20px;
+            background-color: #2d2d2d;
+            border-radius: 8px 8px 0 0;
+            border: 1px solid #444;
+            border-bottom: none;
+        }
+
+        .workspace-container {
+            display: flex;
+            gap: 20px;
+            height: calc(100% - 50px);
+        }
+
+        .editor-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .editor-container {
+            height: 400px;
+            position: relative;
+            background-color: #1e1e1e;
+            border: 1px solid #444;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        #monaco-editor {
+            width: 100%;
+            height: 100%;
+        }
+
+        .button-container {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 10;
+        }
+
+        .button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            margin-left: 8px;
+        }
+
+        .run-button {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .debug-button {
+            background-color: #ffc107;
+            color: black;
+        }
+
+        .terminal {
+            height: 150px;
+            background-color: #1e1e1e;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 10px;
+            font-family: monospace;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+
+        .test-cases {
+            width: 300px;
+            background-color: #1e1e1e;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .test-case {
+            background-color: #2d2d2d;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+
+        .test-case-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .test-case-title {
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .test-case-status {
+            font-size: 0.8em;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background-color: #333;
+        }
+
+        .test-case-details {
+            font-size: 0.85em;
+            color: #bbb;
+        }
+
+        .test-case-io {
+            font-family: monospace;
+            font-size: 0.8em;
+            margin-top: 8px;
+            padding: 8px;
+            background-color: #1e1e1e;
+            border-radius: 4px;
+        }
+
+        .section-title {
+            font-size: 1em;
+            margin-bottom: 15px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title svg {
+            width: 16px;
+            height: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="problems-section">
+            <h2>Problems</h2>
+            <div class="problem-item">
+                <h3>Hello World</h3>
+                <p>Write a program that prints 'Hello, World!' to the console.</p>
+            </div>
+            <div class="problem-item">
+                <h3>Sum of Two Numbers</h3>
+                <p>Create a program that takes two integers as input and prints their sum.</p>
+            </div>
+            <div class="problem-item">
+                <h3>Fibonacci Sequence</h3>
+                <p>Write a program that generates the first n numbers of the Fibonacci sequence.</p>
+            </div>
+        </div>
+    </div>
+    <div class="main-content">
+        <div class="workspace-container">
+            <div class="editor-section">
+                <div class="editor-container">
+                    <div class="button-container">
+                        <button class="button run-button">Run</button>
+                        <button class="button debug-button">Debug</button>
+                    </div>
+                    <div id="monaco-editor"></div>
+                </div>
+                <div class="terminal">
+                    <div class="section-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 17l6-6-6-6M12 19h8"/>
+                        </svg>
+                        Terminal
+                    </div>
+                    <span style="color: #666;">// Terminal output will appear here</span>
+                </div>
+            </div>
+            <div class="test-cases">
+                <div class="section-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+                    </svg>
+                    Test Cases
+                </div>
+                <div class="test-case">
+                    <div class="test-case-header">
+                        <span class="test-case-title">Test Case #1</span>
+                        <span class="test-case-status" style="background-color: #1a5928">Passed</span>
+                    </div>
+                    <div class="test-case-io">
+                        <div>Input: ""</div>
+                        <div>Expected: "Hello, World!"</div>
+                        <div>Output: "Hello, World!"</div>
+                    </div>
+                </div>
+                <div class="test-case">
+                    <div class="test-case-header">
+                        <span class="test-case-title">Test Case #2</span>
+                        <span class="test-case-status" style="background-color: #5c1a1a">Failed</span>
+                    </div>
+                    <div class="test-case-io">
+                        <div>Input: "John"</div>
+                        <div>Expected: "Hello, John!"</div>
+                        <div>Output: "Hello, World!"</div>
+                    </div>
+                </div>
+                <div class="test-case">
+                    <div class="test-case-header">
+                        <span class="test-case-title">Test Case #3</span>
+                        <span class="test-case-status" style="background-color: #333">Pending</span>
+                    </div>
+                    <div class="test-case-io">
+                        <div>Input: "Alice"</div>
+                        <div>Expected: "Hello, Alice!"</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        require.config({
+            paths: {
+                vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs'
+            }
+        });
+
+        require(['vs/editor/editor.main'], function() {
+            const editor = monaco.editor.create(document.getElementById('monaco-editor'), {
+                value: '#include <stdio.h>\n\nint main() {\n    // Your code here\n    return 0;\n}',
+                language: 'cpp',
+                theme: 'vs-dark',
+                automaticLayout: true,
+                minimap: {
+                    enabled: true
+                },
+                fontSize: 14,
+                lineNumbers: 'on',
+                roundedSelection: false,
+                scrollBeyondLastLine: false,
+                readOnly: false,
+                cursorStyle: 'line'
+            });
+
+            // Handle window resize
+            window.addEventListener('resize', function() {
+                editor.layout();
+            });
+
+            // Add button functionality
+            document.querySelector('.run-button').addEventListener('click', function() {
+                const terminal = document.querySelector('.terminal');
+                terminal.innerHTML += '<br>▶ Running program...<br>';
+                // Add your run logic here
+            });
+
+            document.querySelector('.debug-button').addEventListener('click', function() {
+                const terminal = document.querySelector('.terminal');
+                terminal.innerHTML += '<br>🔍 Starting debugger...<br>';
+                // Add your debug logic here
+            });
+
+            // Handle problem selection
+            document.querySelectorAll('.problem-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const problemTitle = this.querySelector('h3').textContent;
+                    document.querySelector('.editor-header h2').textContent = problemTitle;
+                });
+            });
+           
+                function runCode() {
+                    const code = editor.getValue();
+                    const terminal = document.querySelector('.terminal');
+                    terminal.innerHTML = '<span style="color: #666;">Running code...</span>';
+                    
+                    // Get all test cases
+                    const testCases = Array.from(document.querySelectorAll('.test-case')).map(testCase => {
+                        const input = testCase.querySelector('.test-case-io div:nth-child(1)').textContent.replace('Input: ', '').trim();
+                        const expectedOutput = testCase.querySelector('.test-case-io div:nth-child(2)').textContent.replace('Expected: ', '').trim();
+                        return { input, expectedOutput };
+                    });
+                
+                    fetch('http://localhost:3001/run', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            code,
+                            language: 'cpp',
+                            testCases
+                        }),
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            if (data.testResults) {
+                                // Update test cases with results
+                                const testCaseElements = document.querySelectorAll('.test-case');
+                                data.testResults.forEach((result, index) => {
+                                    const testCase = testCaseElements[index];
+                                    const statusElement = testCase.querySelector('.test-case-status');
+                                    const outputDiv = testCase.querySelector('.test-case-io div:nth-child(3)') || 
+                                                    document.createElement('div');
+                                    
+                                    if (!testCase.querySelector('.test-case-io div:nth-child(3)')) {
+                                        testCase.querySelector('.test-case-io').appendChild(outputDiv);
+                                    }
+                
+                                    statusElement.textContent = result.passed ? 'Passed' : 'Failed';
+                                    statusElement.style.backgroundColor = result.passed ? '#1a5928' : '#5c1a1a';
+                                    outputDiv.textContent = `Output: ${result.actualOutput}`;
+                                });
+                
+                                // Update terminal with summary
+                                const passedTests = data.testResults.filter(r => r.passed).length;
+                                terminal.innerHTML = `
+                                    <span style="color: #666;">Test Results:</span><br>
+                                    <span style="color: ${passedTests === data.testResults.length ? '#4caf50' : '#ff9800'}">
+                                        ${passedTests}/${data.testResults.length} tests passed
+                                    </span>
+                                `;
+                            } else {
+                                terminal.innerHTML = `<pre style="color: #4caf50">${data.output}</pre>`;
+                            }
+                        } else {
+                            terminal.innerHTML = `<pre style="color: #f44336">Error: ${data.error}</pre>`;
+                        }
+                    })
+                    .catch(error => {
+                        terminal.innerHTML = `<pre style="color: #f44336">Error: ${error.message}</pre>`;
+                    });
+                }
+                
+                // Update the run button click handler
+                document.querySelector('.run-button').addEventListener('click', runCode);
+               
+        });
+    </script>
+</body>
+</html>
